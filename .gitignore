@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+native-helper/EyeBreakHelper/bin/
+native-helper/EyeBreakHelper/obj/
+
+# Logs & env
+*.log
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Agent-local state (not project source)
+.claude/

@@ -1,0 +1,15 @@
+Ambient break sounds bundled with EyeShield.
+
+Source: Mixkit (https://mixkit.co/free-sound-effects/)
+License: Mixkit Free SFX License (https://mixkit.co/license/)
+
+  - rain.wav       — "mixkit-rain-loop-1250.wav" (SFX ID 1250)
+  - waves.wav      — "mixkit-windy-sea-loop-1200.wav" (SFX ID 1200)
+  - whitenoise.wav — "mixkit-underwater-white-noise-1209.wav" (SFX ID 1209)
+
+Mixkit License summary (paraphrased — see the URL above for the canonical text):
+  - Free to use in commercial and personal projects, including software.
+  - No attribution required.
+  - May NOT be redistributed as standalone stock assets (i.e., re-uploading
+    the raw files to another stock/marketplace). Bundling inside an
+    installed application is permitted.

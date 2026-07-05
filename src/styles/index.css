@@ -1,0 +1,437 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────────
+   Fonts — bundled locally (CSP: font-src 'self').
+   Sora = display/headings + countdown. Space Grotesk = body.
+   Space Mono = tabular numerics.
+   ────────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Sora';
+  src: url('../assets/fonts/Sora-Variable.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('../assets/fonts/SpaceGrotesk-Variable.ttf') format('truetype-variations');
+  font-weight: 300 700;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: url('../assets/fonts/SpaceMono-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Space Mono';
+  src: url('../assets/fonts/SpaceMono-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+@layer base {
+  :root {
+    /* Default theme tokens — overridden by [data-theme="..."] below. */
+    --void: #08080C;
+    --ion: #7C6FF7;
+    --plasma: #00D4AA;
+    --text-primary: #F5F5F7;
+    --text-muted: #9B98B5;
+    --glass-fill: rgba(255,255,255,0.08);
+    --glass-border: rgba(255,255,255,0.18);
+
+    /* Mode flag — 'dark' or 'light'. Drives light-glass vs glass-panel. */
+    --mode: dark;
+
+    /* Backdrop layers */
+    --backdrop-bg: transparent;
+    --backdrop-overlay: transparent;
+  }
+
+  /* VOID — the canonical Liquid Glass dark theme (default). */
+  :root[data-theme="void"],
+  :root[data-theme="void"] body {
+    --void: #08080C;
+    --ion: #7C6FF7;
+    --plasma: #00D4AA;
+    --text-primary: #F5F5F7;
+    --text-muted: #9B98B5;
+    --glass-fill: rgba(255,255,255,0.08);
+    --glass-border: rgba(255,255,255,0.18);
+    --mode: dark;
+    --backdrop-bg: var(--void);
+    --backdrop-overlay: transparent;
+  }
+
+  /* AURORA — midnight blue with teal + magenta plasma. Cool, cosmic. */
+  :root[data-theme="aurora"],
+  :root[data-theme="aurora"] body {
+    --void: #050B1F;
+    --ion: #4DD0E1;        /* aurora teal */
+    --plasma: #FF5DA2;     /* magenta plasma */
+    --text-primary: #E6F1FF;
+    --text-muted: #7C8AB5;
+    --glass-fill: rgba(120,180,255,0.10);
+    --glass-border: rgba(160,200,255,0.22);
+    --mode: dark;
+    --backdrop-bg: var(--void);
+    --backdrop-overlay: transparent;
+  }
+
+  /* DAWN — light, warm, airy. Peach + sky. Uses light glass panels. */
+  :root[data-theme="dawn"],
+  :root[data-theme="dawn"] body {
+    --void: #FBF7F4;
+    --ion: #FF8A65;        /* warm peach */
+    --plasma: #4FC3F7;     /* sky cyan */
+    --text-primary: #1D1D1F;
+    --text-muted: #6E6E73;
+    --glass-fill: rgba(255,255,255,0.72);
+    --glass-border: rgba(0,0,0,0.08);
+    --mode: light;
+    --backdrop-bg: #F2ECE6;
+    --backdrop-overlay: rgba(255,255,255,0.55);
+  }
+
+  /* html, body, #root inherit theme tokens. Settings + onboarding windows
+     are frameless + transparent (see window-manager.ts); their body uses the
+     .transparent-shell class so the desktop shows through behind the glass
+     panel, instead of filling with --backdrop-bg. The overlay renderer keeps
+     the solid --backdrop-bg fill because it's a fullscreen break takeover. */
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    background: var(--backdrop-bg);
+    color: var(--text-primary);
+    font-family: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* Transparent shell: settings + onboarding windows — no backdrop fill,
+     just the floating glass panel over the desktop. */
+  body.transparent-shell,
+  body.transparent-shell #root {
+    background: transparent;
+  }
+
+  body {
+    /* make the renderer window draggable for frameless windows */
+    -webkit-app-region: drag;
+  }
+
+  /* interactive elements break out of the drag region */
+  button, a, input, select, textarea, [data-no-drag] {
+    -webkit-app-region: no-drag;
+  }
+
+  /* Headings use Sora for a striking geometric feel. */
+  h1, h2, h3, .display {
+    font-family: 'Sora', 'Space Grotesk', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply rounded-glass border;
+    background: var(--glass-fill);
+    border-color: var(--glass-border);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Light-mode (dawn) softens shadows + specular for airy look. */
+  :root[data-theme="dawn"] .glass-panel {
+    box-shadow:
+      0 4px 24px rgba(0,0,0,0.06),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+
+  .glass-panel::before {
+    /* specular highlight streak */
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -30%;
+    width: 60%;
+    height: 200%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.12) 50%,
+      transparent 100%
+    );
+    transform: rotate(15deg);
+    animation: specular 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  :root[data-theme="dawn"] .glass-panel::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.5) 50%,
+      transparent 100%
+    );
+    opacity: 0.5;
+  }
+
+  .gradient-bg {
+    position: fixed;
+    inset: 0;
+    background: var(--backdrop-bg);
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.55;
+    animation: blobDrift 25s ease-in-out infinite;
+  }
+
+  .blob-ion {
+    width: 60vw;
+    height: 60vw;
+    background: var(--ion);
+    top: -20%;
+    left: -10%;
+  }
+
+  .blob-plasma {
+    width: 50vw;
+    height: 50vw;
+    background: var(--plasma);
+    bottom: -20%;
+    right: -10%;
+    animation-delay: -8s;
+    opacity: 0.4;
+  }
+
+  @keyframes blobDrift {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    33% { transform: translate(40px,-30px) scale(1.1); }
+    66% { transform: translate(-30px,40px) scale(0.95); }
+  }
+
+  @keyframes specular {
+    0%, 100% { opacity: 0.3; transform: translateX(-30%) rotate(15deg); }
+    50% { opacity: 0.7; transform: translateX(30%) rotate(15deg); }
+  }
+
+  /* Frosted photographic backdrop (used by settings/onboarding) */
+  .light-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--backdrop-overlay);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    z-index: 0;
+  }
+
+  /* In dawn, the photographic backdrop gets a warm cream wash. */
+  :root[data-theme="dawn"] .light-backdrop {
+    background: rgba(255, 250, 245, 0.62);
+  }
+  :root[data-theme="aurora"] .light-backdrop {
+    background: rgba(8, 14, 40, 0.45);
+  }
+  :root[data-theme="void"] .light-backdrop {
+    background: rgba(8, 8, 12, 0.55);
+  }
+
+  /* Light-glass = panel sitting on a light backdrop (dawn + legacy use). */
+  .light-glass {
+    color: var(--text-primary);
+    background: var(--glass-fill);
+    border-color: var(--glass-border);
+  }
+
+  /* In dark themes, light-glass still renders as the dark translucent panel
+     so settings/onboarding work across all themes. */
+  :root[data-theme="void"] .light-glass,
+  :root[data-theme="aurora"] .light-glass {
+    color: var(--text-primary);
+    background: var(--glass-fill);
+    border-color: var(--glass-border);
+    box-shadow:
+      0 8px 32px rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  .light-glass input[type="number"],
+  .light-glass input[type="text"],
+  .light-glass textarea {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+    color: var(--text-primary);
+  }
+  :root[data-theme="dawn"] .light-glass input[type="number"],
+  :root[data-theme="dawn"] .light-glass input[type="text"],
+  :root[data-theme="dawn"] .light-glass textarea {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.1);
+    color: var(--text-primary);
+  }
+
+  .light-glass button[class*="glass-fill"],
+  .light-glass .btn-ghost {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+    color: var(--text-primary);
+  }
+  :root[data-theme="dawn"] .light-glass button[class*="glass-fill"],
+  :root[data-theme="dawn"] .light-glass .btn-ghost {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.1);
+  }
+  .light-glass .btn-ghost:hover { background: rgba(255,255,255,0.12); }
+  :root[data-theme="dawn"] .light-glass .btn-ghost:hover { background: rgba(0,0,0,0.08); }
+
+  /* Dropdown on glass */
+  .light-glass .bg-glass-fill,
+  .light-glass [style*="var(--glass-fill)"] {
+    background: var(--glass-fill) !important;
+    border-color: var(--glass-border) !important;
+    color: var(--text-primary);
+  }
+  :root[data-theme="dawn"] .light-glass .bg-glass-fill,
+  :root[data-theme="dawn"] .light-glass [style*="var(--glass-fill)"] {
+    background: rgba(255,255,255,0.8) !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    color: var(--text-primary);
+  }
+
+  .light-glass button.text-text-muted {
+    color: var(--text-muted);
+  }
+  .light-glass button.bg-white\/15 {
+    background: rgba(255,255,255,0.15);
+    color: var(--text-primary);
+  }
+  :root[data-theme="dawn"] .light-glass button.bg-white\/15 {
+    background: rgba(0,0,0,0.06);
+    color: var(--text-primary);
+  }
+
+  .countdown {
+    font-family: 'Sora', 'Space Grotesk', system-ui, sans-serif;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.04em;
+  }
+
+  .mono {
+    font-family: 'Space Mono', ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 rounded-glass text-sm transition-colors;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-primary);
+  }
+  :root[data-theme="dawn"] .btn-ghost {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.1);
+  }
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.12);
+  }
+  :root[data-theme="dawn"] .btn-ghost:hover {
+    background: rgba(0,0,0,0.08);
+  }
+
+  /* Flat glass — no shadow, no border, no edge glow. Used for settings +
+     onboarding where the window itself provides the frame. */
+  .glass-panel-flat {
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .glass-panel-flat::before {
+    display: none !important;
+  }
+
+  /* Hide scrollbar but keep scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-glass text-sm transition-all;
+    background: linear-gradient(135deg, var(--ion), var(--plasma));
+    color: white;
+    box-shadow: 0 4px 16px rgba(124,111,247,0.4);
+  }
+
+  /* ── Theme-aware surface + border utilities ──────────────────────────────
+     These replace hardcoded bg-white/5, border-white/10, etc. so that
+     the Dawn (light) theme gets dark-on-light surfaces instead of invisible
+     white-on-white. They read --surf-* tokens defined per theme below.
+     ──────────────────────────────────────────────────────────────────── */
+  :root {
+    /* Default (void) surface tokens — translucent white on dark. */
+    --surf-1: rgba(255,255,255,0.05);   /* input / subtle fill */
+    --surf-2: rgba(255,255,255,0.10);   /* hover */
+    --surf-3: rgba(255,255,255,0.15);   /* active / selected */
+    --surf-border: rgba(255,255,255,0.10);
+    --surf-border-strong: rgba(255,255,255,0.40);
+    --on-accent: #ffffff;               /* text sitting on ion/plasma accent */
+  }
+  :root[data-theme="void"] {
+    --surf-1: rgba(255,255,255,0.05);
+    --surf-2: rgba(255,255,255,0.10);
+    --surf-3: rgba(255,255,255,0.15);
+    --surf-border: rgba(255,255,255,0.10);
+    --surf-border-strong: rgba(255,255,255,0.40);
+    --on-accent: #ffffff;
+  }
+  :root[data-theme="aurora"] {
+    --surf-1: rgba(120,180,255,0.06);
+    --surf-2: rgba(120,180,255,0.12);
+    --surf-3: rgba(120,180,255,0.18);
+    --surf-border: rgba(160,200,255,0.14);
+    --surf-border-strong: rgba(160,200,255,0.42);
+    --on-accent: #051020;
+  }
+  :root[data-theme="dawn"] {
+    /* Light theme: translucent black on cream. */
+    --surf-1: rgba(0,0,0,0.04);
+    --surf-2: rgba(0,0,0,0.08);
+    --surf-3: rgba(0,0,0,0.12);
+    --surf-border: rgba(0,0,0,0.10);
+    --surf-border-strong: rgba(0,0,0,0.28);
+    --on-accent: #1D1D1F;
+  }
+
+  /* Semantic surface classes — use these instead of bg-white/5 etc. */
+  .surf-1 { background: var(--surf-1); }
+  .surf-2 { background: var(--surf-2); }
+  .surf-3 { background: var(--surf-3); }
+  .border-surf { border-color: var(--surf-border) !important; }
+  .border-surf-strong { border-color: var(--surf-border-strong) !important; }
+
+  /* Text that sits on an accent gradient button (ion→plasma).
+     White in dark themes, near-black in dawn for contrast. */
+  .on-accent { color: var(--on-accent); }
+}

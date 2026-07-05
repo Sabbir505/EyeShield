@@ -1,0 +1,70 @@
+{
+  "name": "eyeshield",
+  "version": "1.0.0",
+  "description": "Forced eye-break enforcement desktop app with Liquid Glass UI",
+  "main": "dist-electron/electron/main.js",
+  "author": "Sabbir",
+  "license": "MIT",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "dev:renderer": "vite",
+    "dev:electron": "wait-on tcp:5173 && tsc -p electron/tsconfig.json && cross-env NODE_ENV=development electron .",
+    "build:renderer": "vite build",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:helper": "dotnet publish native-helper/EyeBreakHelper/EyeBreakHelper.csproj -c Release -r win-x64 --self-contained true",
+    "package:win": "npm run build && npm run build:helper && electron-builder --win --x64",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p electron/tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^26.0.0",
+    "framer-motion": "^12.0.0",
+    "postcss": "^8.4.49",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.6.0",
+    "vite": "^6.0.0",
+    "wait-on": "^9.0.0"
+  },
+  "dependencies": {},
+  "build": {
+    "appId": "com.eyeshield.app",
+    "productName": "EyeShield",
+    "npmRebuild": false,
+    "files": [
+      "dist-electron/**/*",
+      "dist/assets/**/*",
+      "dist/src/**/*",
+      "build/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "native-helper/EyeBreakHelper/bin/Release/net8.0/win-x64/publish",
+        "to": "EyeBreakHelper",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true
+    }
+  }
+}
