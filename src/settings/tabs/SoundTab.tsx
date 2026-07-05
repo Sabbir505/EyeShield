@@ -124,13 +124,16 @@ export function SoundTab({
           type="checkbox"
           checked={settings.soundOn}
           onChange={(e) => update({ soundOn: e.target.checked })}
-          className="peer sr-only"
+          className="sr-only peer"
         />
         <div
           className="w-11 h-6 rounded-full transition-colors relative peer-checked:bg-ion-purple"
-          style={{ background: 'var(--surf-2)' }}
+          style={{ background: settings.soundOn ? undefined : 'var(--surf-2)' }}
         >
-          <div className="absolute top-[2px] left-[2px] h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+          <div
+            className="absolute top-[2px] h-5 w-5 rounded-full bg-white transition-transform"
+            style={{ left: settings.soundOn ? '22px' : '2px' }}
+          />
         </div>
       </label>
 

@@ -104,13 +104,16 @@ export function GeneralTab({
           type="checkbox"
           checked={settings.autoStart}
           onChange={(e) => update({ autoStart: e.target.checked })}
-          className="peer sr-only"
+          className="sr-only peer"
         />
         <div
           className="w-11 h-6 rounded-full transition-colors relative peer-checked:bg-ion-purple"
-          style={{ background: 'var(--surf-2)' }}
+          style={{ background: settings.autoStart ? undefined : 'var(--surf-2)' }}
         >
-          <div className="absolute top-[2px] left-[2px] h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+          <div
+            className="absolute top-[2px] h-5 w-5 rounded-full bg-white transition-transform"
+            style={{ left: settings.autoStart ? '22px' : '2px' }}
+          />
         </div>
       </label>
     </div>
