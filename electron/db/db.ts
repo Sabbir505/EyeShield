@@ -7,6 +7,12 @@ interface DbShape {
   breaks: BreakRecord[];
   incidents: IncidentRecord[];
   nextId: number;
+  /** Daily emergency-override counter state. Persisted so the cap survives
+   *  app restarts within the same day. Rolled over at local midnight. */
+  overrideCounter?: {
+    date: string;   // yyyy-MM-dd (local)
+    used: number;   // overrides used so far today
+  };
 }
 
 /**
@@ -36,6 +42,12 @@ export class Db {
         breaks: Array.isArray(parsed.breaks) ? parsed.breaks : [],
         incidents: Array.isArray(parsed.incidents) ? parsed.incidents : [],
         nextId: typeof parsed.nextId === 'number' ? parsed.nextId : 1,
+        overrideCounter: (parsed.overrideCounter && typeof parsed.overrideCounter === 'object')
+          ? {
+              date: typeof parsed.overrideCounter.date === 'string' ? parsed.overrideCounter.date : '',
+              used: typeof parsed.overrideCounter.used === 'number' ? parsed.overrideCounter.used : 0,
+            }
+          : undefined,
       };
     } catch {
       // First run or corrupt file — start empty.
@@ -66,6 +78,43 @@ export class Db {
     this.data.incidents.push({ id: this.data.nextId++, at: new Date().toISOString(), type, detail });
     if (this.data.incidents.length > 5000) {
       this.data.incidents = this.data.incidents.slice(-5000);
+    }
+    this.persist();
+  }
+
+  // ── Daily emergency-override counter ───────────────────────────────────────
+  // The cap is enforced in the native helper, but the helper is restarted on
+  // every app launch, so it can't track the daily count itself. Electron is the
+  // source of truth: it persists the count, rolls over at local midnight, and
+  // sends the remaining allowance to the helper with each block command.
+
+  private localDayStr(): string {
+    // Use the local date so "today" matches the user's day, not UTC.
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  /** Returns how many emergency overrides remain today, given the configured cap.
+   *  -1 means "unlimited" (cap is -1). 0 means the cap is exhausted. */
+  overridesLeftToday(cap: number): number {
+    if (cap < 0) return -1;
+    const counter = this.data.overrideCounter;
+    const today = this.localDayStr();
+    if (!counter || counter.date !== today) return cap;
+    return Math.max(0, cap - counter.used);
+  }
+
+  /** Called when the helper honored an override (Esc 5×). Increments the daily
+   *  counter. The helper has already released the block; this just records it. */
+  recordOverrideUsed() {
+    const today = this.localDayStr();
+    if (!this.data.overrideCounter || this.data.overrideCounter.date !== today) {
+      this.data.overrideCounter = { date: today, used: 1 };
+    } else {
+      this.data.overrideCounter.used += 1;
     }
     this.persist();
   }

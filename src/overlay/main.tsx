@@ -75,7 +75,7 @@ function Overlay() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1, duration: 0.8 }}
         >
-          Emergency override: hold Ctrl+Alt+Shift+Q for 5s, or press Esc 5x rapidly
+          Emergency override: press Esc 5× rapidly (limited per day)
         </motion.p>
       </div>
     </motion.div>

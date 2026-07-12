@@ -22,6 +22,9 @@ export function sanitizeSettingsPatch(raw: unknown): Partial<EyeBreakSettings> |
   if (typeof obj.snoozeAllowance === 'number' && obj.snoozeAllowance >= 0 && obj.snoozeAllowance <= 20) {
     out.snoozeAllowance = obj.snoozeAllowance;
   }
+  if (typeof obj.overrideAllowance === 'number' && obj.overrideAllowance >= -1 && obj.overrideAllowance <= 50) {
+    out.overrideAllowance = obj.overrideAllowance;
+  }
   if (typeof obj.soundOn === 'boolean') out.soundOn = obj.soundOn;
   if (typeof obj.ambientSound === 'string' && VALID_AMBIENT.includes(obj.ambientSound as AmbientSound)) {
     out.ambientSound = obj.ambientSound as AmbientSound;

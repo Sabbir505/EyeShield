@@ -5,7 +5,7 @@ import { EventEmitter } from 'events';
 import { log } from '../safety/log';
 
 type HelperMsg =
-  | { type: 'block' }
+  | { type: 'block'; overridesLeft?: number }
   | { type: 'unblock' }
   | { type: 'status' }
   | { type: 'heartbeat' };
@@ -150,6 +150,10 @@ export class HelperBridge extends EventEmitter {
           this.emit('override');
           continue;
         }
+        if (res.event === 'override-denied') {
+          this.emit('override-denied');
+          continue;
+        }
         // lastInputMs from helper is the idle DURATION (ms since last input).
         // We store it as a timestamp: Date.now() - duration = timestamp of last input.
         if (typeof res.lastInputMs === 'number') {
@@ -205,11 +209,15 @@ export class HelperBridge extends EventEmitter {
    * Sends a block command with retry. The block is critical — if the first
    * attempt times out, we retry once before giving up. Returns true if the
    * block was confirmed by the helper.
+   *
+   * overridesLeft is the remaining emergency-override allowance for today
+   * (-1 = unlimited). The helper enforces the hard cap: once it hits 0, Esc-5x
+   * is refused and the block stays until the break timer ends.
    */
-  async sendBlockWithRetry(): Promise<boolean> {
+  async sendBlockWithRetry(overridesLeft: number = -1): Promise<boolean> {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const res = await this.send({ type: 'block' });
+        const res = await this.send({ type: 'block', overridesLeft });
         if (res.ok) return true;
       } catch {
         // timeout or error — retry once

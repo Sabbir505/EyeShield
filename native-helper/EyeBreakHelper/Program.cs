@@ -29,25 +29,23 @@ namespace EyeBreakHelper;
 internal static class Program
 {
     private const int HeartbeatTimeoutMs = 5000;
-    private const int OverrideHoldMs = 5000;
-    private const ushort OverrideVkQ = 0x51; // 'Q'
-    private const ushort OverrideVkCtrl = 0x11;
-    private const ushort OverrideVkAlt = 0x12;
-    private const ushort OverrideVkShift = 0x10;
-    private const ushort OverrideVkEsc = 0x1B; // VK_ESCAPE — secondary override
-    private const int SecondaryOverridePresses = 5; // press Esc 5x rapidly
-    private const int SecondaryOverrideWindowMs = 3000; // within 3 seconds
+    private const ushort OverrideVkEsc = 0x1B; // VK_ESCAPE — emergency override
+    private const int OverridePresses = 5; // press Esc 5x rapidly
+    private const int OverrideWindowMs = 3000; // within 3 seconds
 
     private static DateTime _lastHeartbeat = DateTime.UtcNow;
     private static bool _isBlocking = false;
     private static DateTime _lastInputTime = DateTime.UtcNow;
     private static readonly object _lock = new();
 
-    // Override key-hold tracking (primary: Ctrl+Alt+Shift+Q 5s hold)
-    private static DateTime? _overrideHoldStart = null;
-
-    // Secondary override tracking (Esc 5x rapid press)
+    // Override tracking (Esc 5x rapid press)
     private static readonly List<DateTime> _escPressTimes = new();
+
+    // Daily override cap. Electron sends overridesLeft with each block command;
+    // the helper enforces the hard cap: once the daily allowance is exhausted,
+    // Esc-5x is refused and the block stays until the break timer ends.
+    private static int _overridesLeftToday = -1; // -1 = no cap (Electron not enforcing)
+    private static string _overrideDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
 
     private static int Main(string[] args)
     {
@@ -94,6 +92,7 @@ internal static class Program
                     {
                         Console.Error.WriteLine($"[helper] heartbeat lost ({sinceHeartbeat}ms) — auto-unblocking");
                         ReleaseBlockInternal();
+                        continue;
                     }
                 }
             }
@@ -121,7 +120,15 @@ internal static class Program
                 switch (type)
                 {
                     case "block":
-                        AcquireBlock(seq);
+                        // overridesLeft: how many emergency overrides remain today
+                        // (persisted by Electron; rolled over at midnight). -1/absent
+                        // means "no cap" (back-compat / Electron not enforcing).
+                        int overridesLeft = -1;
+                        if (root.TryGetProperty("overridesLeft", out var olEl) && olEl.TryGetInt32(out var ol))
+                        {
+                            overridesLeft = ol;
+                        }
+                        AcquireBlock(seq, overridesLeft);
                         break;
                     case "unblock":
                         ReleaseBlockInternal();
@@ -152,17 +159,38 @@ internal static class Program
         Environment.Exit(0);
     }
 
-    private static void AcquireBlock(string? seq)
+    private static void AcquireBlock(string? seq, int overridesLeft)
     {
         lock (_lock)
         {
+            // The keyboard is blocked by the WH_KEYBOARD_LL hook (see OnKeyEvent),
+            // NOT by BlockInput — BlockInput returns ACCESS_DENIED (error 5) in
+            // this process/session, so relying on it left the block failing AND
+            // gated the override behind a flag (_isBlocking) that could never
+            // become true. We now set _isBlocking unconditionally and let the
+            // hook swallow keys.
+            //
+            // BlockInput is still attempted as best-effort for the mouse — if it
+            // succeeds, the cursor is also frozen; if it fails (likely error 5),
+            // the fullscreen overlay window covers the mouse visually.
             var ok = NativeMethods.BlockInput(true);
             if (!ok)
             {
-                ReplyError(seq, "BlockInput(TRUE) failed — may require same-session active desktop");
-                return;
+                int err = Marshal.GetLastWin32Error();
+                Console.Error.WriteLine($"[helper] BlockInput(TRUE) best-effort FAILED (GetLastError={err}) — keyboard still blocked via hook; mouse falls back to overlay");
             }
+            // Roll over the daily override counter at UTC midnight. Electron is
+            // the source of truth for the cap (it persists across restarts and
+            // knows the local timezone); the helper just enforces whatever
+            // overridesLeft it was told for the current day.
+            var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+            if (today != _overrideDate)
+            {
+                _overrideDate = today;
+            }
+            _overridesLeftToday = overridesLeft;
             _isBlocking = true;
+            _escPressTimes.Clear();
             _lastHeartbeat = DateTime.UtcNow;
             ReplyOk(seq, "blocking");
         }
@@ -178,62 +206,58 @@ internal static class Program
             }
             catch { /* ignore */ }
             _isBlocking = false;
-            _overrideHoldStart = null; // reset override progress on unblock
+            _escPressTimes.Clear();
         }
     }
 
-    private static void OnKeyEvent(int vk, bool down)
+    /// <summary>
+    /// Returns true if the key should be SWALLOWED (not forwarded to the
+    /// system / next hook). During a block we swallow EVERYTHING so the
+    /// keyboard is effectively locked — except we still observe the override
+    /// combo and Esc-5x to release. Outside a block we swallow nothing.
+    /// </summary>
+    private static bool OnKeyEvent(int vk, bool down)
     {
         lock (_lock)
         {
-            // Track last-input regardless
+            // Track last-input regardless of block state
             _lastInputTime = DateTime.UtcNow;
 
-            if (!_isBlocking) return;
-
-            // ── Primary override: Ctrl+Alt+Shift+Q held for 5 seconds ──
-            bool ctrl = (NativeMethods.GetAsyncKeyState(OverrideVkCtrl) & 0x8000) != 0;
-            bool alt = (NativeMethods.GetAsyncKeyState(OverrideVkAlt) & 0x8000) != 0;
-            bool shift = (NativeMethods.GetAsyncKeyState(OverrideVkShift) & 0x8000) != 0;
-            bool qDown = (NativeMethods.GetAsyncKeyState(OverrideVkQ) & 0x8000) != 0;
-
-            if (ctrl && alt && shift && qDown)
+            if (!_isBlocking)
             {
-                if (_overrideHoldStart == null)
-                {
-                    _overrideHoldStart = DateTime.UtcNow;
-                }
-                else
-                {
-                    var held = (DateTime.UtcNow - _overrideHoldStart.Value).TotalMilliseconds;
-                    if (held >= OverrideHoldMs)
-                    {
-                        // Trigger!
-                        EmitOverride();
-                        ReleaseBlockInternal();
-                        _overrideHoldStart = null;
-                        return;
-                    }
-                }
-            }
-            else
-            {
-                _overrideHoldStart = null; // released too early → restart
+                return false; // not blocking → never swallow
             }
 
-            // ── Secondary override: press Esc 5 times rapidly (within 3s) ──
+            // ── Override: press Esc 5 times rapidly (within 3s) ──
             if (vk == OverrideVkEsc && down)
             {
                 var now = DateTime.UtcNow;
                 _escPressTimes.Add(now);
-                _escPressTimes.RemoveAll(t => (now - t).TotalMilliseconds > SecondaryOverrideWindowMs);
-                if (_escPressTimes.Count >= SecondaryOverridePresses)
+                _escPressTimes.RemoveAll(t => (now - t).TotalMilliseconds > OverrideWindowMs);
+                if (_escPressTimes.Count >= OverridePresses)
                 {
-                    EmitOverride();
-                    ReleaseBlockInternal();
                     _escPressTimes.Clear();
+                    // Enforce the daily cap. Electron sent overridesLeft with the
+                    // block command; once exhausted, the override is refused and
+                    // the block stays until the break timer ends. -1 = no cap.
+                    if (_overridesLeftToday == 0)
+                    {
+                        Console.Error.WriteLine("[helper] override DENIED — daily override cap reached; block stays");
+                        EmitOverrideDenied();
+                    }
+                    else
+                    {
+                        if (_overridesLeftToday > 0) _overridesLeftToday--;
+                        EmitOverride();
+                        ReleaseBlockInternal();
+                    }
                 }
             }
+
+            // While blocking, swallow every key. The override keys are still
+            // observed above (we track state ourselves), so swallowing them
+            // doesn't blind us.
+            return true;
         }
     }
 
@@ -259,6 +283,18 @@ internal static class Program
     private static void EmitOverride()
     {
         var obj = new { @event = "override" };
+        Console.Out.WriteLine(JsonSerializer.Serialize(obj));
+        Console.Out.Flush();
+    }
+
+    /// <summary>
+    /// Emitted when the user hit the Esc-5x combo but the daily override cap was
+    /// already exhausted. The block is NOT released. Electron logs this as an
+    /// accountability incident (the user tried to escape a forced break).
+    /// </summary>
+    private static void EmitOverrideDenied()
+    {
+        var obj = new { @event = "override-denied", reason = "daily-cap" };
         Console.Out.WriteLine(JsonSerializer.Serialize(obj));
         Console.Out.Flush();
     }

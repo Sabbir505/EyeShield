@@ -384,6 +384,18 @@
     box-shadow: 0 4px 16px rgba(124,111,247,0.4);
   }
 
+  /* Rounded window mask for frameless transparent windows.
+     Uses a radial gradient mask to create the illusion of rounded corners
+     by making the corner pixels transparent, letting the desktop show through. */
+  .rounded-window-mask {
+    -webkit-mask-image: radial-gradient(circle at 0 0, transparent 24px, black 24.5px),
+                        radial-gradient(circle at 100% 0, transparent 24px, black 24.5px),
+                        radial-gradient(circle at 0 100%, transparent 24px, black 24.5px),
+                        radial-gradient(circle at 100% 100%, transparent 24px, black 24.5px);
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+
   /* ── Theme-aware surface + border utilities ──────────────────────────────
      These replace hardcoded bg-white/5, border-white/10, etc. so that
      the Dawn (light) theme gets dark-on-light surfaces instead of invisible

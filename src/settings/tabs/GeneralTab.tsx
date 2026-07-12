@@ -13,6 +13,11 @@ const ICONS = {
       <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
     </svg>
   ),
+  override: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 12a11 11 0 1 1-22 0 11 11 0 0 1 22 0Z"/><path d="M9 9l6 6M15 9l-6 6"/>
+    </svg>
+  ),
 };
 
 function StatCard({
@@ -89,6 +94,31 @@ export function GeneralTab({
           unit="/day"
           onChange={(n) => update({ snoozeAllowance: n })}
         />
+      </div>
+
+      {/* Emergency override daily cap — full width */}
+      <div className="w-full p-4 rounded-xl border border-surf surf-1 flex items-center gap-4">
+        <div className="w-10 h-10 rounded-lg surf-2 flex items-center justify-center flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
+          {ICONS.override}
+        </div>
+        <div className="flex-1">
+          <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Emergency override limit</div>
+          <div className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Times per day you can press Esc 5× to escape a break early. -1 = unlimited.
+          </div>
+        </div>
+        <div className="flex items-baseline gap-1">
+          <input
+            type="number"
+            value={settings.overrideAllowance}
+            min={-1}
+            max={50}
+            onChange={(e) => update({ overrideAllowance: Number(e.target.value) })}
+            className="w-14 text-center text-2xl font-semibold bg-transparent border-b-2 focus:outline-none py-1 mono"
+            style={{ color: 'var(--text-primary)', borderColor: 'var(--surf-border)' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>/day</span>
+        </div>
       </div>
 
       {/* Auto-start toggle */}

@@ -108,7 +108,10 @@ async function start() {
 
   // ── Event wiring (with safeAsync wrappers) ────────────────────────────────
   scheduler.on('breakStart', safeAsync(async () => {
-    const blocked = await helper.sendBlockWithRetry();
+    // Pass the remaining daily override allowance to the helper so it can
+    // enforce the hard cap (refuse Esc-5x once exhausted). -1 = unlimited.
+    const overridesLeft = db.overridesLeftToday(store.getOverrideAllowance());
+    const blocked = await helper.sendBlockWithRetry(overridesLeft);
     if (!blocked) {
       log('WARNING: block command failed — overlay will show but input may not be blocked');
     } else {
@@ -134,12 +137,22 @@ async function start() {
   });
 
   helper.on('override', safeAsync(async () => {
+    // Helper honored the Esc-5x override and already released the block.
     overlayMgr.hideOverlay();
     await helper.send({ type: 'unblock' });
     await crashGuard.clearFlag();
     db.recordBreak({ started_at: new Date().toISOString(), status: 'overridden', duration_sec: store.getBreakDuration() });
-    db.logIncident('emergency_override', 'User triggered override (Ctrl+Alt+Shift+Q 5s or Esc 5x)');
+    db.recordOverrideUsed();
+    const left = db.overridesLeftToday(store.getOverrideAllowance());
+    db.logIncident('emergency_override', `User triggered override (Esc 5x). Overrides left today: ${left < 0 ? 'unlimited' : left}`);
     scheduler.resetToNextInterval();
+  }));
+
+  helper.on('override-denied', safeAsync(async () => {
+    // User hit Esc-5x but the daily override cap is exhausted. The helper did
+    // NOT release the block — the overlay stays and input stays locked until
+    // the break timer ends. Log it for accountability; do not unblock.
+    db.logIncident('override_denied', 'User tried Esc-5x override but daily allowance is exhausted; break enforced');
   }));
 
   powerMonitor.on('suspend', () => scheduler.handleSystemSuspend());

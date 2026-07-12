@@ -255,7 +255,7 @@ function Onboarding() {
                     Uses Windows' <span className="mono" style={{ color: 'var(--plasma)' }}>BlockInput</span> API to block all keyboard and mouse input system-wide during breaks — so you actually rest.
                   </StepCard>
                   <StepCard icon={ICONS.keyboard} title="Emergency override">
-                    Listens for <span className="mono" style={{ color: 'var(--plasma)' }}>Ctrl+Alt+Shift+Q</span> (held 5 seconds) so you're never truly trapped.
+                    Press <span className="mono" style={{ color: 'var(--plasma)' }}>Esc 5×</span> rapidly to release a break early — but it's limited to a few uses per day, so you're nudged toward real rest rather than trapped.
                   </StepCard>
                   <StepCard icon={ICONS.shieldCheck} title="Antivirus notice">
                     Your antivirus may flag the keyboard hook. This is expected for any app that intercepts input at this level. The helper is open-source and does nothing besides BlockInput + the override listener.
@@ -326,7 +326,7 @@ function Onboarding() {
                 <div className="flex items-center gap-2 p-3 rounded-xl border border-surf surf-1 max-w-xs">
                   <div style={{ color: 'var(--text-muted)' }}>{ICONS.sparkle}</div>
                   <p className="text-xs leading-relaxed text-left" style={{ color: 'var(--text-muted)' }}>
-                    Remember the override: <span className="mono" style={{ color: 'var(--plasma)' }}>Ctrl+Alt+Shift+Q</span> for 5 seconds — but try not to use it. The point is real rest.
+                    Remember the override: <span className="mono" style={{ color: 'var(--plasma)' }}>Esc 5×</span> — but try not to use it. It's capped a few times per day, and the point is real rest.
                   </p>
                 </div>
               </motion.div>

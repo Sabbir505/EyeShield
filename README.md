@@ -7,7 +7,7 @@ A Windows desktop app that **enforces** screen breaks instead of just suggesting
 - Locks the screen across **all monitors** for the configured break duration
 - **Blocks all keyboard + mouse input** system-wide via the Windows `BlockInput` API
 - **Cannot be dismissed** by clicking, Alt+Tab, Win+D, Esc, or any normal input
-- **Emergency override**: hold `Ctrl+Alt+Shift+Q` for 5 seconds, or press `Esc` 5× rapidly
+- **Emergency override**: press `Esc` 5× rapidly (limited to a few uses per day)
 - **Crash-safe**: a watchdog releases the input block if Electron dies; a flag file prevents auto-blocking on the next launch if the last session crashed mid-block
 - Calm "Liquid Glass" UI — animated gradient blobs, frosted glass panels, breathing guide
 - Stats: compliance %, streak counter, incident log, CSV export

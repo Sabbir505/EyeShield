@@ -67,9 +67,9 @@ function Settings() {
   }
 
   return (
-    <div className="w-[560px] h-[560px] flex items-center justify-center rounded-glass overflow-hidden bg-transparent">
+    <div className="w-[560px] h-[560px] flex items-center justify-center overflow-hidden bg-transparent rounded-window-mask">
       <GlassPanel
-        className="w-[560px] h-[560px] flex flex-col !overflow-visible [&::before]:hidden light-glass glass-panel-flat"
+        className="w-[560px] h-[560px] flex flex-col overflow-hidden [&::before]:hidden light-glass glass-panel-flat rounded-glass"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
       >

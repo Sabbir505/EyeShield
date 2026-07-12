@@ -80,7 +80,7 @@ export function StatsTab({
   onRange: (r: 'day' | 'week') => void;
 }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center min-h-full">
       {/* Segmented control + export */}
       <div className="flex items-center gap-2 mb-5 w-full max-w-md">
         <div className="flex rounded-lg border border-surf surf-1 p-0.5">

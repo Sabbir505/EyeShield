@@ -7,6 +7,8 @@ export interface EyeBreakSettings {
   intervalMin: number;
   breakDurationSec: number;
   snoozeAllowance: number;
+  /** Max emergency overrides (Esc 5×) allowed per day. 0 = never, -1 = unlimited. */
+  overrideAllowance: number;
   soundOn: boolean;
   ambientSound: 'none' | 'rain' | 'whitenoise' | 'waves';
   theme: 'void' | 'aurora' | 'dawn';

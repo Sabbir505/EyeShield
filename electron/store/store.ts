@@ -7,6 +7,7 @@ const DEFAULTS: EyeBreakSettings = {
   intervalMin: 20,
   breakDurationSec: 20,
   snoozeAllowance: 2,
+  overrideAllowance: 3,
   soundOn: false,
   ambientSound: 'none',
   theme: 'void',
@@ -71,6 +72,10 @@ export class Store {
 
   getSnoozeAllowance(): number {
     return this.data.snoozeAllowance;
+  }
+
+  getOverrideAllowance(): number {
+    return this.data.overrideAllowance;
   }
 
   getOnboardingComplete(): boolean {

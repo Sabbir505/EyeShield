@@ -44,11 +44,11 @@ internal static partial class NativeMethods
 internal static class KeyboardHook
 {
     private static NativeMethods.LowLevelKeyboardProc? _proc;
+    private static Func<int, bool, bool>? _onKey; // (vk, down) -> swallow?
     private static IntPtr _hook = IntPtr.Zero;
-    private static Action<int, bool>? _onKey;
     private static Thread? _messagePump;
 
-    public static void Install(Action<int, bool> onKey)
+    public static void Install(Func<int, bool, bool> onKey)
     {
         _onKey = onKey;
         _proc = HookCallback;
@@ -61,10 +61,24 @@ internal static class KeyboardHook
 
     private static void MessagePumpLoop()
     {
-        using var process = System.Diagnostics.Process.GetCurrentProcess();
-        using var module = process.MainModule!;
-        var hMod = NativeMethods.GetModuleHandle(module.ModuleName!);
-        _hook = NativeMethods.SetWindowsHookEx(NativeMethods.WH_KEYBOARD_LL, _proc!, hMod, 0);
+        try
+        {
+            using var process = System.Diagnostics.Process.GetCurrentProcess();
+            using var module = process.MainModule!;
+            var hMod = NativeMethods.GetModuleHandle(module.ModuleName!);
+            _hook = NativeMethods.SetWindowsHookEx(NativeMethods.WH_KEYBOARD_LL, _proc!, hMod, 0);
+            if (_hook == IntPtr.Zero)
+            {
+                Console.Error.WriteLine($"[helper] SetWindowsHookEx FAILED (GetLastError={Marshal.GetLastWin32Error()}) — override will NOT work");
+                return;
+            }
+            Console.Error.WriteLine($"[helper] keyboard hook installed (handle={_hook})");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[helper] hook install threw: {ex.Message}");
+            return;
+        }
 
         // Standard message pump — required for low-level hooks to fire
         NativeMessage msg;
@@ -73,6 +87,8 @@ internal static class KeyboardHook
             NativeMethods.TranslateMessage(ref msg);
             NativeMethods.DispatchMessage(ref msg);
         }
+
+        Console.Error.WriteLine("[helper] message pump exited");
 
         // Clean up the hook on message pump exit (defensive — normally the
         // process exits without this, but Windows cleans up on process exit).
@@ -93,7 +109,16 @@ internal static class KeyboardHook
             bool up = msg == NativeMethods.WM_KEYUP || msg == NativeMethods.WM_SYSKEYUP;
             if (down || up)
             {
-                _onKey(vk, down);
+                // If OnKeyEvent returns true, swallow the key: return a non-zero
+                // result WITHOUT calling CallNextHookEx, so the key is not
+                // delivered to the focused window or any other hook. This is how
+                // the low-level keyboard hook becomes the input-block primitive
+                // (BlockInput fails with ACCESS_DENIED, so we block here instead).
+                bool swallow = _onKey(vk, down);
+                if (swallow)
+                {
+                    return (IntPtr)1;
+                }
             }
         }
         return NativeMethods.CallNextHookEx(_hook, nCode, wParam, lParam);

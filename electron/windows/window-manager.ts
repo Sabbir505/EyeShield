@@ -43,6 +43,7 @@ export class WindowManager {
       backgroundColor: '#00000000',
       thickFrame: false,
       hasShadow: false,
+      roundedCorners: true,
       webPreferences: {
         preload: path.join(__dirname, '..', 'preload.js'),
         contextIsolation: true,
